@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>دستیار مهندسی بائومیت</title>
+    <!-- Bootstrap CSS -->
+    <link 
+        href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" 
+        rel="stylesheet">
+    <style>
+        body {
+            background-color: #f0f8ff; /* تغییر رنگ پس‌زمینه کلی */
+        }
+        .container {
+            background-color: #ffffff; /* تغییر رنگ پس‌زمینه کانتینر */
+            border-radius: 10px;
+            padding: 30px;
+            box-shadow: 0px 4px 8px rgba(0, 0, 0, 0.1);
+        }
+        h1 {
+            color: #0066cc; /* تغییر رنگ عنوان */
+        }
+        .form-control, .btn {
+            border-radius: 10px;
+        }
+        .btn-primary {
+            background-color: #e63946;
+            border-color: #e63946;
+        }
+        .btn-primary:hover {
+            background-color: #96000c;
+            border-color: #96000c;
+        }
+        .alert-success {
+            background-color: #14213d; /* تغییر رنگ پس‌زمینه alert موفقیت */
+            color: #ffffff; /* تغییر رنگ متن alert موفقیت */
+        }
+        .alert-danger {
+            background-color: #dc3545; /* تغییر رنگ پس‌زمینه alert خطا */
+            color: #ffffff; /* تغییر رنگ متن alert خطا */
+        }
+        .invalidItem {
+            direction: rtl;
+        }
+    </style>
+</head>
+<body>
+    <div class="container mt-5">
+        <h1 class="text-center mb-4">دستیار مهندسی بائومیت</h1>
+        <form id="calculator-form" class="border p-4 rounded shadow-sm bg-light" dir="rtl">
+            <div class="mb-3">
+                <label for="texture-code" class="form-label">کد تکستچر :</label>
+                <input 
+                    type="text" 
+                    id="texture-code" 
+                    class="form-control" 
+                    placeholder="کد تکستچر (tx001)" 
+                    required>
+            </div>
+            <div class="mb-3">
+                <label for="area" class="form-label">اندازه (بر اساس متر مربع) :</label>
+                <input 
+                    type="number" 
+                    id="area" 
+                    class="form-control" 
+                    placeholder="مساحت را وارد نمایید" 
+                    required 
+                    min="0">
+            </div>
+            <button type="submit" class="btn btn-primary w-100">محاسبه</button>
+        </form>
+        <div id="output" class="result mt-4"></div>
+    </div>
+
+    <script 
+        src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js">
+    </script>
+    <script>
+        let textures = [];
+
+        // بارگذاری داده‌های تکستچرها از فایل JSON
+        fetch('https://www.baumitiran.com/load-json.php')
+            .then(response => response.json())
+            .then(data => {
+                textures = data;
+            })
+            .catch(error => console.error('Error loading texture data:', error));
+
+        const form = document.getElementById("calculator-form");
+        const output = document.getElementById("output");
+
+        form.addEventListener("submit", (event) => {
+            event.preventDefault();
+
+            const textureCode = document.getElementById("texture-code").value.trim().toUpperCase();
+            const area = parseFloat(document.getElementById("area").value);
+
+            const texture = textures.find((t) => t.code === textureCode);
+
+            if (texture) {
+                let resultHTML = `
+                    <div class="alert alert-success">
+                        <h5 dir="rtl">نتیجه : <strong>${texture.name}</strong></h5>
+                        <img src="${texture.image}" alt="${texture.name}" class="img-fluid rounded mb-3" style="max-width: 150px;">
+                        <ul class="list-group">
+                `;
+
+                if (texture.products) {
+                    for (const [productKey, productData] of Object.entries(texture.products)) {
+                        let totalQuantity = productData.quantity * area; // مقدار کل مورد نیاز
+
+                        // اطلاعات بسته‌بندی
+                        const packageSize = productData.package.size;
+
+                        // محاسبه تعداد بسته‌ها
+                        const packagesNeeded = Math.ceil(totalQuantity / packageSize);
+
+                        resultHTML += `
+                            <li class="list-group-item">
+                                ${productKey}: <br>
+                                <strong>${totalQuantity.toFixed(2)}</strong> ${productData.package.unit} - <strong>${packagesNeeded}</strong> بسته (<strong>${packageSize}</strong> ${productData.package.unit}) 
+                            </li>
+                        `;
+                    }
+                }
+
+
+
+                // پردازش اطلاعات اضافی (در صورت وجود)
+                if (texture.additionalInfo) {
+                    for (const [infoKey, infoValue] of Object.entries(texture.additionalInfo)) {
+                        resultHTML += `
+                            <li class="list-group-item">
+                                ${infoKey} :<br> <strong>${infoValue}</strong>
+                            </li>
+                        `;
+                    }
+                }
+
+                resultHTML += `
+                        </ul>
+                    </div>
+                `;
+
+                output.innerHTML = resultHTML;
+            } else {
+                output.innerHTML = `
+                    <div class="alert alert-danger">
+                        کد تکستچر وارد شده مطابقت ندارد.
+                    </div>
+                `;
+            }
+        });
+    </script>
+</body>
+</html>
